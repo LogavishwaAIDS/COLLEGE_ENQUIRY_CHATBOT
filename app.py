@@ -3,7 +3,7 @@ from chat import get_response
 import os
 import nltk
 
-nltk.download('punkt')
+nltk.download('punkt', quiet=True)
 
 app = Flask(__name__)
 

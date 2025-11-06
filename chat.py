@@ -6,36 +6,43 @@ from nltk_utils import bag_of_words, tokenize
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-bot_name = "Sam"
+# Lazy-load variables
 model = None
 intents = None
 all_words = None
 tags = None
+initialized = False
 
 def load_chatbot():
-    """Load model and data only once."""
-    global model, intents, all_words, tags
-    if model is None:
-        with open('intents.json', 'r', encoding='utf-8') as json_data:
-            intents_data = json.load(json_data)
-        FILE = "data.pth"
-        data = torch.load(FILE, map_location=device)
+    """Load the chatbot model and data once (on first message)."""
+    global model, intents, all_words, tags, initialized
+    if initialized:
+        return
 
-        input_size = data["input_size"]
-        hidden_size = data["hidden_size"]
-        output_size = data["output_size"]
-        all_words_local = data['all_words']
-        tags_local = data['tags']
-        model_state = data["model_state"]
+    with open('intents.json', 'r', encoding='utf-8') as json_data:
+        intents_data = json.load(json_data)
 
-        loaded_model = NeuralNet(input_size, hidden_size, output_size).to(device)
-        loaded_model.load_state_dict(model_state)
-        loaded_model.eval()
+    FILE = "data.pth"
+    data = torch.load(FILE, map_location=device)
 
-        model = loaded_model
-        intents = intents_data
-        all_words = all_words_local
-        tags = tags_local
+    input_size = data["input_size"]
+    hidden_size = data["hidden_size"]
+    output_size = data["output_size"]
+    all_words_local = data['all_words']
+    tags_local = data['tags']
+    model_state = data["model_state"]
+
+    net = NeuralNet(input_size, hidden_size, output_size).to(device)
+    net.load_state_dict(model_state)
+    net.eval()
+
+    # Assign globals
+    model = net
+    intents = intents_data
+    all_words = all_words_local
+    tags = tags_local
+    initialized = True
+    print("✅ Chatbot model loaded successfully!")
 
 def get_response(msg):
     """Generate chatbot response."""
@@ -60,9 +67,9 @@ def get_response(msg):
     return "No results found. Try another appropriate keyword."
 
 if __name__ == "__main__":
-    print("Let's chat! (type 'quit' to exit)")
+    print("Chatbot ready! Type 'quit' to stop.")
     while True:
-        sentence = input("You: ")
-        if sentence == "quit":
+        msg = input("You: ")
+        if msg.lower() == "quit":
             break
-        print(get_response(sentence))
+        print("Bot:", get_response(msg))
